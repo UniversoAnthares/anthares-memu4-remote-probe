@@ -1,5 +1,6 @@
 version: 1.0.{build}
 
+build_cloud: 4-cores
 image: Visual Studio 2022
 
 clone_depth: 1
@@ -14,4 +15,4 @@ artifacts:
     name: item1-probe-result
 
 on_finish:
-  - ps: Write-Host ('ITEM1_FINISH build=' + $env:APPVEYOR_BUILD_ID + ' worker=' + $env:APPVEYOR_BUILD_WORKER_IMAGE)
+  - ps: Write-Host ('ITEM1_FINISH build=' + $env:APPVEYOR_BUILD_ID + ' worker=' + $env:APPVEYOR_BUILD_WORKER_IMAGE + ' cloud=' + $env:APPVEYOR_BUILD_WORKER_CLOUD)
