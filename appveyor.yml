@@ -1,0 +1,17 @@
+version: 1.0.{build}
+
+image: Visual Studio 2022
+
+clone_depth: 1
+
+build: off
+
+test_script:
+  - ps: .\scripts\probe-nested-virtualization.ps1
+
+artifacts:
+  - path: item1-probe-result.json
+    name: item1-probe-result
+
+on_finish:
+  - ps: Write-Host ('ITEM1_FINISH build=' + $env:APPVEYOR_BUILD_ID + ' worker=' + $env:APPVEYOR_BUILD_WORKER_IMAGE)
