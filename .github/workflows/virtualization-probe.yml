@@ -1,0 +1,24 @@
+﻿name: MEmu virtualization probe
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - name: Probe virtualization exposure
+        shell: pwsh
+        run: |
+          $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1 Name,VirtualizationFirmwareEnabled,SecondLevelAddressTranslationExtensions,VMMonitorModeExtensions
+          $cs = Get-CimInstance Win32_ComputerSystem | Select-Object Manufacturer,Model,HypervisorPresent,TotalPhysicalMemory
+          $os = Get-CimInstance Win32_OperatingSystem | Select-Object Caption,Version,BuildNumber,FreePhysicalMemory
+          $disk = Get-PSDrive C | Select-Object Used,Free
+          Write-Host '=== CPU ==='; $cpu | Format-List
+          Write-Host '=== COMPUTER ==='; $cs | Format-List
+          Write-Host '=== OS ==='; $os | Format-List
+          Write-Host '=== DISK ==='; $disk | Format-List
+          Write-Host '=== SYSTEMINFO HYPER-V ==='
+          systeminfo | Select-String -Pattern 'Hyper-V Requirements|VM Monitor Mode Extensions|Virtualization Enabled In Firmware|Second Level Address Translation|Data Execution Prevention|A hypervisor has been detected' -Context 0,4
+          $eligible = [bool]$cpu.VirtualizationFirmwareEnabled -and [bool]$cpu.VMMonitorModeExtensions -and [bool]$cpu.SecondLevelAddressTranslationExtensions
+          "NESTED_VIRTUALIZATION_ELIGIBLE=$($eligible.ToString().ToLower())" | Tee-Object -FilePath $env:GITHUB_OUTPUT -Append
+          if (-not $eligible) { Write-Error 'Nested hardware virtualization is not exposed to this hosted runner.'; exit 2 }
