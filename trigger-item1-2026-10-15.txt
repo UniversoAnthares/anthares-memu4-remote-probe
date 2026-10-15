@@ -1,0 +1,1 @@
+Trigger AppVeyor item 1 probe after project authorization.
