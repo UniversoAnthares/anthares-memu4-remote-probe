@@ -47,6 +47,7 @@ jobs:
           force-avd-creation: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-metrics -accel on -memory 2048
           script: |
+            bash -e <<'KW01_BASH'
             set -Eeuo pipefail
             echo "KW01_ANDROID_HOSTED=STARTED"
             test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1
@@ -71,3 +72,4 @@ jobs:
             echo "KW01_KWAI_REMOTE_10MIN_SESSION=PASS"
             echo "KW01_PUBLISH_OPERATION=NOT_TRIGGERED"
             echo "KW01_PERSONAL_COMPUTER=NOT_USED"
+            KW01_BASH
