@@ -91,6 +91,7 @@ def navigate():
     recovery_count=0
     resource_attempts=0
     anr_attempts=0
+    interest_attempts=0
     for i in range(38):
         nodes,text=screen()
         s=state(nodes,text)
@@ -120,9 +121,26 @@ def navigate():
             if n:click(n)
             else:adb("shell","input","swipe","850","1100","180","1100","250")
         elif s=="INTEREST_SELECT":
-            n=label(nodes,"skip","pular","skip for now")
-            if n:click(n)
-            else:adb("shell","input","tap","90","250")
+            interest_attempts+=1
+            print("KW02_INTEREST_GATE_ATTEMPT=%d" % interest_attempts,flush=True)
+            n=rid(nodes,"bt_interest_skip_top_right")
+            if n is None:n=label(nodes,"skip","pular","skip for now")
+            if interest_attempts<=2 and n is not None:
+                click(n)
+            elif interest_attempts==3:
+                adb("shell","input","tap","90","250")
+                time.sleep(2)
+            else:
+                choice=label(nodes,"comedy","music","gaming","dance","food")
+                if choice is not None and interest_attempts in (4,6):
+                    click(choice)
+                proceed=label(nodes,"selected and continue","continue","next","continuar","avançar")
+                if proceed is not None:
+                    click(proceed)
+                elif n is not None:click(n)
+                else:adb("shell","input","keyevent","4")
+            if interest_attempts==10:relaunch()
+            if interest_attempts>=15:raise RuntimeError("KW02_INTEREST_ONBOARDING_BLOCKED")
         elif s=="INTEREST":
             n=rid(nodes,"tiny_discovery_dislike_button","tiny_discovery_like_button")
             if n:click(n)
