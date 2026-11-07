@@ -33,6 +33,36 @@ jobs:
           unzip -q /tmp/kwai-vault.zip -d /tmp/kwai-vault
           test -s /tmp/kwai-vault/MANIFEST.tsv
           echo "KW01_VERIFIED_OFFICIAL_APK_VAULT=READY"
+      - name: Prepare Bash runtime inside hosted runner
+        shell: bash
+        run: |
+          cat >/tmp/kw01-session.sh <<'KW01_SCRIPT'
+          set -Eeuo pipefail
+          echo "KW01_ANDROID_HOSTED=STARTED"
+          test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1
+          mapfile -t apks < <(find /tmp/kwai-vault -maxdepth 1 -name '*.apk' -type f | sort)
+          test "${#apks[@]}" -ge 4 || { echo "KW01_SPLIT_APKS_MISSING"; exit 31; }
+          timeout 150 adb install-multiple -r "${apks[@]}"
+          adb shell pm path com.kwai.video | grep -q 'package:'
+          echo "KW01_KWAI_PACKAGE_INSTALLED=YES"
+          timeout 35 adb shell monkey -p com.kwai.video -c android.intent.category.LAUNCHER 1 || adb shell am start -n com.kwai.video/com.yxcorp.gifshow.tiny.TinyLaunchActivity
+          sleep 20
+          adb shell pidof com.kwai.video | grep -q '[0-9]'
+          echo "KW01_KWAI_PROCESS_OPEN=YES"
+          adb shell dumpsys activity activities | grep 'com.kwai.video' | head -5 || true
+          for n in $(seq 1 10); do
+            test "$(adb get-state)" = device
+            test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1
+            adb shell pidof com.kwai.video | grep -q '[0-9]' || { echo "KW01_KWAI_PROCESS_EXITED_MINUTE=$n"; exit 43; }
+            echo "KW01_ANDROID_KWAI_ALIVE_MINUTE=$n"
+            sleep 60
+          done
+          adb shell dumpsys activity activities | grep 'com.kwai.video' | head -5 || true
+          echo "KW01_KWAI_REMOTE_10MIN_SESSION=PASS"
+          echo "KW01_PUBLISH_OPERATION=NOT_TRIGGERED"
+          echo "KW01_PERSONAL_COMPUTER=NOT_USED"
+          KW01_SCRIPT
+          chmod +x /tmp/kw01-session.sh
       - name: Boot cloud Android and keep official Kwai session alive
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -46,30 +76,4 @@ jobs:
           emulator-boot-timeout: 480
           force-avd-creation: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-metrics -accel on -memory 2048
-          script: |
-            bash -e <<'KW01_BASH'
-            set -Eeuo pipefail
-            echo "KW01_ANDROID_HOSTED=STARTED"
-            test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1
-            mapfile -t apks < <(find /tmp/kwai-vault -maxdepth 1 -name '*.apk' -type f | sort)
-            test "${#apks[@]}" -ge 4 || { echo "KW01_SPLIT_APKS_MISSING"; exit 31; }
-            timeout 150 adb install-multiple -r "${apks[@]}"
-            adb shell pm path com.kwai.video | grep -q 'package:'
-            echo "KW01_KWAI_PACKAGE_INSTALLED=YES"
-            timeout 35 adb shell monkey -p com.kwai.video -c android.intent.category.LAUNCHER 1 || adb shell am start -n com.kwai.video/com.yxcorp.gifshow.tiny.TinyLaunchActivity
-            sleep 20
-            adb shell pidof com.kwai.video | grep -q '[0-9]'
-            echo "KW01_KWAI_PROCESS_OPEN=YES"
-            adb shell dumpsys activity activities | grep 'com.kwai.video' | head -5 || true
-            for n in $(seq 1 10); do
-              test "$(adb get-state)" = device
-              test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1
-              adb shell pidof com.kwai.video | grep -q '[0-9]' || { echo "KW01_KWAI_PROCESS_EXITED_MINUTE=$n"; exit 43; }
-              echo "KW01_ANDROID_KWAI_ALIVE_MINUTE=$n"
-              sleep 60
-            done
-            adb shell dumpsys activity activities | grep 'com.kwai.video' | head -5 || true
-            echo "KW01_KWAI_REMOTE_10MIN_SESSION=PASS"
-            echo "KW01_PUBLISH_OPERATION=NOT_TRIGGERED"
-            echo "KW01_PERSONAL_COMPUTER=NOT_USED"
-            KW01_BASH
+          script: bash /tmp/kw01-session.sh
