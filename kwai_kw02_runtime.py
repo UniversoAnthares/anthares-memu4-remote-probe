@@ -323,8 +323,12 @@ def run():
     time.sleep(12)
     navigate()
     stabilized()
-    if not creator():
-        raise RuntimeError("KW02_PUBLICATION_UI_BLOCKED_BY_AUTH_KW03")
+    # The ordinary record button kept the feed unchanged in proven Android 35
+    # runs. Use the manifest-declared exported video SEND ingress instead.
+    print("KW02_OFFICIAL_MEDIA_INGRESS=BEGIN",flush=True)
+    probe=subprocess.run([sys.executable,"kw02_direct_send_creator.py"],timeout=220)
+    if probe.returncode!=0:
+        raise RuntimeError("KW02_OFFICIAL_MEDIA_INGRESS_BLOCKED_RC_"+str(probe.returncode))
     print("KW02_COMPLETE=PASS")
 
 if __name__=="__main__":
