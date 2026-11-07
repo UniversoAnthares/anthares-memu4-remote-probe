@@ -78,6 +78,22 @@ def main():
     if auth:
         print("KW02_CREATE_REQUIRES_KW03_AUTH=YES")
         return 67
+    if ids==before_ids and labels==before_labels:
+        # Distinct official path: let Android select the exported Kwai SEND
+        # handler rather than naming UriRouterActivity explicitly.
+        rc2,out2=adb("shell","am","start","-W","-a","android.intent.action.SEND",
+                   "-t","video/mp4","-p",PKG,"--grant-read-uri-permission",
+                   "--eu","android.intent.extra.STREAM",uri,timeout=55)
+        accepted=rc2==0 and ("Status: ok" in out2 or "Complete" in out2 or "Starting:" in out2)
+        print("KW02_PACKAGE_RESOLVED_SEND_ACCEPTED="+str(int(accepted)))
+        if accepted:
+            time.sleep(12)
+            ids,labels=ui()
+            focus=fg().casefold()
+            auth=any(x in ids for x in ("login_container","email_address_et","phone_number","signin","login_platform","verification_code")) or any(x in labels for x in ("continue with google","log in or sign up","enter phone number","verification code"))
+            if auth:
+                print("KW02_CREATE_REQUIRES_KW03_AUTH=YES")
+                return 67
     editor_ids=("editor","video_edit","publish","caption","preview","video_trim","post","cover","photo_editor")
     editor_words=(" edit "," publish "," publicar "," trim "," legenda "," capa "," add music "," choose cover "," video editor "," select video ")
     editor=any(k in ids for k in editor_ids) or any(k in (" "+labels+" ") for k in editor_words)
