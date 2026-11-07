@@ -54,10 +54,10 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: pixel_5
-          ram-size: 2048M
-          cores: 2
+          ram-size: 4096M
+          cores: 4
           disable-animations: true
           emulator-boot-timeout: 480
           force-avd-creation: true
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-metrics -accel on -memory 2048
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-metrics -accel on -memory 4096 -cores 4
           script: bash /tmp/kw02-launch.sh
