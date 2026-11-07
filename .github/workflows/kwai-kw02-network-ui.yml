@@ -1,0 +1,63 @@
+name: KW-02 Kwai Android connectivity and publication UI
+run-name: KW-02 official Kwai resource recovery (no posting)
+on:
+  push:
+    branches: [kwai-kw02-network-create-20261107]
+    paths:
+      - '.github/workflows/kwai-kw02-network-ui.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: kwai-kw02-isolated-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  kw02_remote_app:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Hosted Android virtualization
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test -c /dev/kvm
+          sudo chmod 666 /dev/kvm
+      - name: Download verified official Kwai split APKs
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          curl -fL --retry 3 --connect-timeout 15 --max-time 180 -o /tmp/kw02-vault.zip https://github.com/UniversoAnthares/anthares-kwai-runner/releases/download/kwai-package-vault/kwai-vault.zip
+          echo '96650454576a2cf5cc5e63d90011f0b60a03d2702605756f40cc934cd6ae5543  /tmp/kw02-vault.zip' | sha256sum -c -
+          mkdir -p /tmp/kw02-vault
+          unzip -q /tmp/kw02-vault.zip -d /tmp/kw02-vault
+          test -s /tmp/kw02-vault/MANIFEST.tsv
+      - name: Prepare real application recovery in hosted runner
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python3 -m py_compile kwai_kw02_runtime.py
+          cat >/tmp/kw02-launch.sh <<'KW02_BASH'
+          #!/usr/bin/env bash
+          set -Eeuo pipefail
+          mapfile -t apks < <(find /tmp/kw02-vault -maxdepth 1 -name '*.apk' -type f | sort)
+          test "${#apks[@]}" -ge 4
+          timeout 150 adb install-multiple -r "${apks[@]}"
+          adb shell pm path com.kwai.video | grep -q package:
+          python3 kwai_kw02_runtime.py
+          KW02_BASH
+          chmod +x /tmp/kw02-launch.sh
+      - name: Open Kwai and reach publication UI over working network
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_5
+          ram-size: 2048M
+          cores: 2
+          disable-animations: true
+          emulator-boot-timeout: 480
+          force-avd-creation: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-metrics -accel on -memory 2048
+          script: bash /tmp/kw02-launch.sh
