@@ -51,7 +51,7 @@ def main():
     if len(rows)!=1:
         print("KW02_SEND_MEDIASTORE_EXACT_MATCH="+str(len(rows)))
         return 62
-    m=re.search(r"(?:^|[,\\s])_id=(\\d+)",rows[0])
+    m=re.search(r"(?:^|[,\s])_id=(\d+)",rows[0])
     if not m:return 63
     uri="content://media/external/video/media/"+m.group(1)
     print("KW02_SEND_MEDIA_READY=YES")
@@ -79,7 +79,7 @@ def main():
         print("KW02_CREATE_REQUIRES_KW03_AUTH=YES")
         return 67
     editor_ids=("editor","video_edit","publish","caption","preview","video_trim","post","cover","photo_editor")
-    editor_words=(" edit "," publish "," publicar "," trim "," legenda "," capa "," add music "," choose cover "," video editor "," select video "," next ")
+    editor_words=(" edit "," publish "," publicar "," trim "," legenda "," capa "," add music "," choose cover "," video editor "," select video ")
     editor=any(k in ids for k in editor_ids) or any(k in (" "+labels+" ") for k in editor_words)
     changed=ids!=before_ids or labels!=before_labels
     print("KW02_SEND_CHANGED_UI="+str(int(changed)))
