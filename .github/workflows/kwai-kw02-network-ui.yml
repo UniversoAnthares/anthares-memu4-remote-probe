@@ -36,7 +36,8 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          python3 -m py_compile kwai_kw02_runtime.py
+          python3 -m py_compile kwai_kw02_runtime.py kw02_direct_send_creator.py
+          command -v ffmpeg >/dev/null
           cat >/tmp/kw02-launch.sh <<'KW02_BASH'
           #!/usr/bin/env bash
           set -Eeuo pipefail
