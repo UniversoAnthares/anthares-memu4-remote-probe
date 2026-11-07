@@ -1,5 +1,5 @@
 name: KW-02 Kwai Android connectivity and publication UI
-run-name: KW-02 official Kwai creator UI acceptance (no posting)
+run-name: KW-02 Android package-resolved official SEND route (no posting)
 on:
   push:
     branches: [kwai-kw02-network-create-20261107]
