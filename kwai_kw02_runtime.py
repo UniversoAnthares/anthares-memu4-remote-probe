@@ -63,6 +63,7 @@ def offline(text):
     return any(x in text for x in OFFLINE)
 
 def state(nodes,text):
+    if "isn\u0027t responding" in text or "is not responding" in text or "não está respondendo" in text:return "ANR"
     if main_nav(nodes,text):return "MAIN"
     if resource_gate(text):return "RESOURCE"
     if "start now" in text or "you're all set" in text or "you’re all set" in text:return "START"
@@ -89,13 +90,29 @@ def navigate():
     adb("shell","pm","grant",PKG,"android.permission.POST_NOTIFICATIONS")
     recovery_count=0
     resource_attempts=0
+    anr_attempts=0
     for i in range(38):
         nodes,text=screen()
         s=state(nodes,text)
         print("KW02_FSM_%02d=%s UI=%s"%(i,s,text[:350]),flush=True)
         if s=="MAIN":
             return nodes,text
-        if s=="PERMISSION":
+        if s=="ANR":
+            anr_attempts+=1
+            print("KW02_ANR_RECOVERY=%d" % anr_attempts,flush=True)
+            wants_close=("pixel launcher" in text and anr_attempts>=2) or ("kwai" in text and anr_attempts>=4)
+            target="close app" if wants_close else "wait"
+            n=rid(nodes,"aerr_close" if wants_close else "aerr_wait")
+            if n is None:n=label(nodes,target,"fechar aplicativo" if wants_close else "aguardar")
+            if n is not None:click(n)
+            else:adb("shell","input","keyevent","4")
+            time.sleep(8 if not wants_close else 4)
+            if anr_attempts in (3,6):
+                adb("shell","input","keyevent","3")
+                time.sleep(3)
+                relaunch()
+            if anr_attempts>=9:raise RuntimeError("KW02_PERSISTENT_UI_ANR")
+        elif s=="PERMISSION":
             n=rid(nodes,"permission_allow_button") or label(nodes,"allow","permitir")
             if n:click(n)
         elif s=="START":
