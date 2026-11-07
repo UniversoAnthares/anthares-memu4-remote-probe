@@ -265,9 +265,30 @@ def creator():
                     print("KW02_PUBLISH_INTERFACE_ACCESSIBLE=PASS")
                     print("KW02_CREATE_ROUTE_CONFIRMED=HOME_ACTIVITY_RECORD_BUTTON")
                     return True
+                p=ctr(n)
+                if p:
+                    print("KW02_LONG_PRESS_NATIVE_CREATE=BEGIN",flush=True)
+                    adb("shell","input","swipe",str(p[0]),str(p[1]),str(p[0]),str(p[1]),"1200")
+                    time.sleep(10)
+                    nodes3,text3=screen()
+                    print("KW02_AFTER_LONG_PRESS_UI="+text3[:420],flush=True)
+                    if text3!=baseline and any(k in text3 for k in ("album","gallery","upload","record","camera","câmera","choose video","select video","gravar","galeria","álbum")):
+                        print("KW02_PUBLISH_INTERFACE_ACCESSIBLE=PASS")
+                        print("KW02_CREATE_ROUTE_CONFIRMED=HOME_ACTIVITY_LONG_PRESS")
+                        return True
                 if "login" in text2 and not main_nav(nodes2,text2):
                     print("KW02_CREATE_ROUTE_REQUIRES_KW03_AUTH=YES")
                     return False
+    logs=adb("shell","logcat","-d","-t","600",timeout=35).casefold()
+    codes={
+       "AUTH":("authentication","login required","must log in","need login","user not logged","unauthorized"),
+       "MODULE":("module not found","dynamic feature","splitcompat","missing feature","record module","installing module"),
+       "PERMISSION":("permission denial","permission denied","securityexception"),
+       "NETWORK":("unknownhostexception","timeoutconnection","connectexception","sockettimeoutexception"),
+       "CRASH":("fatal exception","androidruntime","activitynotfoundexception"),
+    }
+    for name,phrases in codes.items():
+        print("KW02_LOGCAT_%s_MATCH=%d"%(name,int(any(p in logs for p in phrases))),flush=True)
     raise RuntimeError("KW02_COMPOSER_NOT_REACHED")
 
 def run():
