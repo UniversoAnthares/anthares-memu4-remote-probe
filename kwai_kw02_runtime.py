@@ -231,7 +231,45 @@ def creator():
                 print("KW02_CREATE_UNCHANGED_FEED=YES")
                 break
             time.sleep(3)
+    print("KW02_CREATOR_HOME_ACTIVITY_FALLBACK=BEGIN",flush=True)
+    routes=[
+        ("native-home",("shell","am","start","-W","--activity-clear-top","-n",PKG+"/com.yxcorp.gifshow.homepage.HomeActivity")),
+        ("record-link",("shell","am","start","-W","-a","android.intent.action.VIEW","-d","kwai://record",PKG)),
+        ("publish-link",("shell","am","start","-W","-a","android.intent.action.VIEW","-d","kwai://publish",PKG)),
+    ]
+    for route,args in routes:
+        output=adb(*args,timeout=35)
+        print("KW02_FALLBACK=%s RESPONSE=%s"%(route,output[:450]),flush=True)
+        if "error:" in output.casefold() or "exception" in output.casefold():
+            continue
+        time.sleep(8)
+        nodes,text=screen()
+        focus_raw=adb("shell","dumpsys","activity","activities")
+        focus=" ".join(l.strip() for l in focus_raw.splitlines() if "topResumedActivity" in l or "mCurrentFocus" in l)[-300:]
+        print("KW02_FALLBACK_UI=%s FOCUS=%s"%(text[:360],focus),flush=True)
+        if text!=baseline and any(k in text for k in ("album","gallery","upload","record","camera","câmera","choose video","select video","gravar","galeria","álbum")):
+            print("KW02_PUBLISH_INTERFACE_ACCESSIBLE=PASS")
+            print("KW02_CREATE_ROUTE_CONFIRMED="+route)
+            return True
+        if route=="native-home":
+            n=rid(nodes,"fake_add_button","id_record_layout")
+            if n is not None:
+                print("KW02_FALLBACK_NATIVE_BUTTON="+n.get("resource-id","")[-95:],flush=True)
+                click(n)
+                time.sleep(8)
+                nodes2,text2=screen()
+                focus2_raw=adb("shell","dumpsys","activity","activities")
+                focus2=" ".join(l.strip() for l in focus2_raw.splitlines() if "topResumedActivity" in l or "mCurrentFocus" in l)[-300:]
+                print("KW02_AFTER_HOME_RECORD_UI=%s FOCUS=%s"%(text2[:380],focus2),flush=True)
+                if text2!=baseline and any(k in text2 for k in ("album","gallery","upload","record","camera","câmera","choose video","select video","gravar","galeria","álbum")):
+                    print("KW02_PUBLISH_INTERFACE_ACCESSIBLE=PASS")
+                    print("KW02_CREATE_ROUTE_CONFIRMED=HOME_ACTIVITY_RECORD_BUTTON")
+                    return True
+                if "login" in text2 and not main_nav(nodes2,text2):
+                    print("KW02_CREATE_ROUTE_REQUIRES_KW03_AUTH=YES")
+                    return False
     raise RuntimeError("KW02_COMPOSER_NOT_REACHED")
+
 def run():
     assert adb("shell","getprop","sys.boot_completed").strip()=="1"
     packages=adb("shell","pm","path",PKG)
