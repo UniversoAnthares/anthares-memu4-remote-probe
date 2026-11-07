@@ -50,7 +50,7 @@ jobs:
       - name: Open Kwai and reach publication UI over working network
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 28
+          api-level: 30
           arch: x86_64
           target: google_apis
           profile: pixel_5
