@@ -311,6 +311,14 @@ def run():
     packages=adb("shell","pm","path",PKG)
     assert "package:" in packages
     print("KW02_OFFICIAL_KWAI_INSTALLED=YES")
+    requested=adb("shell","dumpsys","package",PKG,timeout=20)
+    for permission in ("CAMERA","RECORD_AUDIO","READ_MEDIA_IMAGES","READ_MEDIA_VIDEO","READ_EXTERNAL_STORAGE"):
+        name="android.permission."+permission
+        if name in requested:
+            result=adb("shell","pm","grant",PKG,name,timeout=12)
+            print("KW02_GRANT_%s=%s"%(permission,"APPLIED" if not result.strip() else "IGNORED"),flush=True)
+    adb("shell","appops","set",PKG,"CAMERA","allow")
+    adb("shell","appops","set",PKG,"RECORD_AUDIO","allow")
     adb("shell","monkey","-p",PKG,"-c","android.intent.category.LAUNCHER","1")
     time.sleep(12)
     navigate()
