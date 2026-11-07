@@ -182,47 +182,56 @@ def stabilized():
     return nodes,text
 
 def creator():
-    nodes,text=screen()
-    # Native create control sometimes has an unlabeled '+' in the bottom navigation.
-    selected=None
+    nodes,baseline=screen()
+    sz=adb("shell","wm","size")
+    m=re.search(r"(\d+)x(\d+)",sz)
+    if not m:raise RuntimeError("KW02_DISPLAY_SIZE_UNKNOWN")
+    width,height=map(int,m.groups())
+    if not main_nav(nodes,baseline):raise RuntimeError("KW02_NATIVE_NAV_UNAVAILABLE")
+    candidates=[]
     for n in nodes:
         ridx=n.get("resource-id","").casefold()
         lbl=(n.get("text","")+" "+n.get("content-desc","")).strip().casefold()
         p=ctr(n)
-        if not p:continue
-        if any(k in ridx for k in ("ll_camera","btn_camera","create","publish","record")) or lbl in ("+","create","criar","gravar"):
-            selected=n;break
-    if selected:
-        print("KW02_CREATE_ROUTE=SEMANTIC_NATIVE")
-        click(selected)
-    elif main_nav(nodes,text):
-        size=adb("shell","wm","size")
-        m=re.search(r"(\d+)x(\d+)",size)
-        if not m:raise RuntimeError("KW02_DISPLAY_SIZE_UNKNOWN")
-        w,h=map(int,m.groups())
-        adb("shell","input","tap",str(w//2),str(round(h*.95)))
-        print("KW02_CREATE_ROUTE=MAIN_NAV_CENTER")
+        if not p or p[1]<height*.73 or p[0]<width*.20 or p[0]>width*.80:continue
+        if any(k in ridx for k in ("ll_camera","btn_camera","create","publish","record","shoot")) or lbl in ("+","create","criar","gravar"):
+            candidates.append((p,"native:"+ridx[-90:]))
+    candidates.append(((width//2,round(height*.955)),"nav-center"))
+    candidates.append(((width//2,round(height*.92)),"nav-center-upper"))
+    seen=set()
+    for p,route in candidates:
+        if p in seen:continue
+        seen.add(p)
+        print("KW02_CREATE_ATTEMPT=%s AT=%s"%(route,p),flush=True)
+        adb("shell","input","tap",str(p[0]),str(p[1]))
         time.sleep(5)
-    else:raise RuntimeError("KW02_NATIVE_NAV_UNAVAILABLE")
-    for i in range(8):
-        nodes,text=screen()
-        fg=adb("shell","dumpsys","window").casefold()[-1700:]
-        print("KW02_COMPOSER_CHECK_%d=%s"%(i,text[:440]),flush=True)
-        if resource_gate(text) or offline(text):
-            if i>=5:raise RuntimeError("KW02_CREATE_NETWORK_BLOCKED")
-            time.sleep(3);continue
-        permission=rid(nodes,"permission_allow_button")
-        if permission:
-            click(permission);continue
-        if any(k in text for k in COMPOSER) or any(k in fg for k in ("capture","recordactivity","cameraactivity","publishactivity","photopicker","permissioncontroller")):
-            print("KW02_PUBLISH_INTERFACE_ACCESSIBLE=PASS")
-            return True
-        if any(k in text for k in AUTH):
-            print("KW02_CREATE_ROUTE_REQUIRES_KW03_AUTH=YES")
-            return False
-        time.sleep(3)
+        for i in range(4):
+            nodes,text=screen()
+            top=adb("shell","dumpsys","activity","activities")
+            focus=" ".join(x.strip() for x in top.splitlines() if "topResumedActivity" in x or "mResumedActivity" in x or "mCurrentFocus" in x)[-500:]
+            print("KW02_CREATE_UI=%s FOCUS=%s"%(text[:500],focus[:250]),flush=True)
+            if resource_gate(text) or offline(text):
+                time.sleep(4);continue
+            permission=rid(nodes,"permission_allow_button")
+            if permission is not None:
+                click(permission);continue
+            creator_labels=("album","gallery","upload","record","take photo","take picture","camera","câmera","choose video","select video","shoot","gravar","galeria","álbum","carregar","foto e vídeo")
+            visual_creator=any(k in text for k in creator_labels)
+            actual_activity=bool(re.search(r"(kwai|gifshow)[^\n]{0,160}(record|camera|capture|publish|editor|photopicker|album)",focus,re.I))
+            changed=text!=baseline
+            if changed and (visual_creator or actual_activity):
+                print("KW02_PUBLISH_INTERFACE_ACCESSIBLE=PASS")
+                print("KW02_CREATE_ROUTE_CONFIRMED="+route)
+                return True
+            login_wall=("continue with google" in text or "phone email" in text or "enter phone" in text or "verification code" in text or "sign up" in text) or (changed and not main_nav(nodes,text) and any(k in text for k in AUTH))
+            if login_wall:
+                print("KW02_CREATE_ROUTE_REQUIRES_KW03_AUTH=YES")
+                return False
+            if text==baseline:
+                print("KW02_CREATE_UNCHANGED_FEED=YES")
+                break
+            time.sleep(3)
     raise RuntimeError("KW02_COMPOSER_NOT_REACHED")
-
 def run():
     assert adb("shell","getprop","sys.boot_completed").strip()=="1"
     packages=adb("shell","pm","path",PKG)
