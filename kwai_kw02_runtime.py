@@ -279,7 +279,22 @@ def creator():
                 if "login" in text2 and not main_nav(nodes2,text2):
                     print("KW02_CREATE_ROUTE_REQUIRES_KW03_AUTH=YES")
                     return False
-    logs=adb("shell","logcat","-d","-t","600",timeout=35).casefold()
+    raw_logs=adb("shell","logcat","-d","-t","1500",timeout=35)
+    logs=raw_logs.casefold()
+    # Print only sanitized exception class / top cause, never credentials or app state.
+    candidate=[]
+    for line in raw_logs.splitlines():
+        if ("AndroidRuntime" in line or "FATAL EXCEPTION" in line or "Caused by:" in line) and any(tag in line for tag in ("FATAL EXCEPTION","Caused by:","Exception","Error","Process:")):
+            clean=re.sub(r"(https?://\\S+|[A-Za-z0-9_.%+-]+@[A-Za-z0-9.-]+|[0-9]{8,})","[redacted]",line)
+            candidate.append(clean[-260:])
+    for i,line in enumerate(candidate[-15:]):
+        print("KW02_NATIVE_EXCEPTION_%02d=%s"%(i,line),flush=True)
+    focus_nodes,_=screen()
+    for n in focus_nodes:
+        ridx=n.get("resource-id","")
+        if ridx.endswith(("id_record_layout","fake_add_button")):
+            print("KW02_NATIVE_CREATE_CONTROL_STATE=enabled:%s clickable:%s bounds:%s"%(
+                n.get("enabled"),n.get("clickable"),n.get("bounds")),flush=True)
     codes={
        "AUTH":("authentication","login required","must log in","need login","user not logged","unauthorized"),
        "MODULE":("module not found","dynamic feature","splitcompat","missing feature","record module","installing module"),
