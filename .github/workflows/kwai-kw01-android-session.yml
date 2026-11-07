@@ -1,4 +1,5 @@
 name: KW-01 Android remoto Kwai — sessao isolada
+run-name: KW-01 Android oficial Kwai (sem publicar)
 on:
   push:
     branches: [kwai-kw01-remote-android-20261106]
