@@ -50,14 +50,14 @@ jobs:
       - name: Open Kwai and reach publication UI over working network
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: 28
           arch: x86_64
           target: google_apis
           profile: pixel_5
-          ram-size: 4096M
+          ram-size: 3072M
           cores: 4
           disable-animations: true
           emulator-boot-timeout: 480
           force-avd-creation: true
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-metrics -camera-back emulated -camera-front emulated -accel on -memory 4096 -cores 4
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-metrics -camera-back emulated -camera-front emulated -accel on -memory 3072 -cores 4
           script: bash /tmp/kw02-launch.sh
